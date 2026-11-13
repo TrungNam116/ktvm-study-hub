@@ -1,0 +1,314 @@
+<!DOCTYPE html>
+<html lang="vi" class="h-full bg-slate-100">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>KTVM MASTER - Nền Tảng Ôn Tập Toàn Diện Kinh Tế Vĩ Mô</title>
+  
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  
+  <!-- KaTeX for LaTeX Math Rendering -->
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/katex.min.css">
+  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/katex.min.js"></script>
+  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/contrib/auto-render.min.js"></script>
+
+  <!-- Custom CSS -->
+  <link rel="stylesheet" href="style.css">
+</head>
+<body class="h-full text-slate-800 antialiased selection:bg-blue-500 selection:text-white">
+
+  <!-- TOP HEADER -->
+  <header class="bg-white border-b border-slate-200 sticky top-0 z-50 shadow-xs">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      <div class="flex items-center justify-between h-16 gap-4">
+        
+        <!-- Brand Logo & Name -->
+        <div class="flex items-center gap-3">
+          <div class="w-10 h-10 rounded-xl bg-gradient-to-tr from-blue-700 to-indigo-600 flex items-center justify-center text-white font-black text-xl shadow-md shadow-blue-500/20">
+            VM
+          </div>
+          <div>
+            <div class="flex items-center gap-2">
+              <h1 class="font-black text-slate-900 text-lg tracking-tight leading-none">KTVM MASTER</h1>
+              <span class="px-2 py-0.5 rounded-full text-[10px] font-extrabold bg-blue-100 text-blue-700 tracking-wider uppercase">Pro Hub</span>
+            </div>
+            <p class="text-[11px] text-slate-400 font-medium">Ôn tập trọn gói Kinh tế Vĩ mô (Chương 10 - 21)</p>
+          </div>
+        </div>
+
+        <!-- Global Search Bar -->
+        <div class="flex-1 max-w-md hidden md:block">
+          <div class="relative">
+            <input 
+              type="text" 
+              id="global-search-input" 
+              placeholder="🔍 Tìm kiếm trong 1.924 câu hỏi, công thức, thuật ngữ..." 
+              class="w-full pl-9 pr-4 py-2 text-xs bg-slate-100 border border-transparent focus:border-blue-500 focus:bg-white rounded-xl outline-none transition-all placeholder:text-slate-400"
+            >
+            <span class="absolute left-3 top-2.5 text-xs text-slate-400">🔍</span>
+          </div>
+        </div>
+
+        <!-- Live Performance Stats Quick Bar -->
+        <div class="flex items-center gap-3 text-xs">
+          <div class="hidden sm:flex items-center gap-1.5 px-3 py-1.5 bg-slate-50 border border-slate-200 rounded-xl">
+            <span class="text-slate-500">Đã làm:</span>
+            <strong id="stat-answered-q" class="text-blue-600 font-bold">0</strong>
+            <span class="text-slate-400">/</span>
+            <span id="stat-total-q" class="text-slate-600 font-semibold">1.924</span>
+          </div>
+
+          <div class="flex items-center gap-1.5 px-3 py-1.5 bg-emerald-50 border border-emerald-200 rounded-xl text-emerald-800">
+            <span class="text-emerald-600">Độ chính xác:</span>
+            <strong id="stat-accuracy" class="font-bold">0%</strong>
+          </div>
+
+          <button onclick="switchTab('mistakes')" class="flex items-center gap-1.5 px-3 py-1.5 bg-rose-50 border border-rose-200 hover:bg-rose-100 text-rose-800 rounded-xl transition-colors font-medium">
+            <span>❌ Câu sai:</span>
+            <strong id="stat-mistakes-count" class="font-bold">0</strong>
+          </button>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <!-- NAVIGATION BAR (TABS) -->
+  <nav class="bg-white border-b border-slate-200/80 shadow-xs">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      <div class="flex items-center gap-1.5 overflow-x-auto py-2.5 scrollbar-none">
+        
+        <button data-nav-tab="theory" class="nav-active px-4 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-2 whitespace-nowrap">
+          <span>📚</span>
+          <span>Lý Thuyết & Slide</span>
+        </button>
+
+        <button data-nav-tab="models" class="bg-slate-100 hover:bg-slate-200 text-slate-700 px-4 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-2 whitespace-nowrap">
+          <span>📈</span>
+          <span>Đồ Thị & Mô Hình Tương Tác</span>
+        </button>
+
+        <button data-nav-tab="quiz" class="bg-slate-100 hover:bg-slate-200 text-slate-700 px-4 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-2 whitespace-nowrap">
+          <span>✍️</span>
+          <span>Ngân Hàng Trắc Nghiệm (1.924 Câu)</span>
+        </button>
+
+        <button data-nav-tab="exam" class="bg-slate-100 hover:bg-slate-200 text-slate-700 px-4 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-2 whitespace-nowrap">
+          <span>⏱️</span>
+          <span>Thi Thử Tính Giờ</span>
+        </button>
+
+        <button data-nav-tab="mistakes" class="bg-slate-100 hover:bg-slate-200 text-slate-700 px-4 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-2 whitespace-nowrap">
+          <span>🎯</span>
+          <span>Sổ Tay Câu Sai & Gắn Cờ</span>
+        </button>
+
+        <button data-nav-tab="flashcards" class="bg-slate-100 hover:bg-slate-200 text-slate-700 px-4 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-2 whitespace-nowrap">
+          <span>🃏</span>
+          <span>Flashcards Ôn Nhanh</span>
+        </button>
+
+      </div>
+    </div>
+  </nav>
+
+  <!-- CHAPTER SELECTOR SUB-BAR -->
+  <div class="bg-slate-50 border-b border-slate-200/60 py-2.5">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      <div class="flex items-center gap-2 overflow-x-auto scrollbar-none" id="chapter-selector-bar">
+        <!-- Rendered dynamically by app.js -->
+      </div>
+    </div>
+  </div>
+
+  <!-- MAIN VIEWPORT CONTAINER -->
+  <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 pb-24">
+    
+    <!-- Tab 1: Theory Panel -->
+    <section id="tab-theory" class="tab-content-panel">
+      <div id="theory-content">
+        <!-- Rendered dynamically by app.js -->
+      </div>
+    </section>
+
+    <!-- Tab 2: Interactive Models Panel -->
+    <section id="tab-models" class="tab-content-panel hidden">
+      <div id="models-content">
+        <!-- Rendered dynamically by app.js -->
+      </div>
+    </section>
+
+    <!-- Tab 3: Quiz Questions Bank Panel -->
+    <section id="tab-quiz" class="tab-content-panel hidden">
+      <div id="quiz-content">
+        <!-- Rendered dynamically by app.js -->
+      </div>
+    </section>
+
+    <!-- Tab 4: Exam Simulator Panel -->
+    <section id="tab-exam" class="tab-content-panel hidden">
+      <div id="exam-content">
+        <!-- Rendered dynamically by app.js -->
+      </div>
+    </section>
+
+    <!-- Tab 5: Mistakes & Flagged Review Panel -->
+    <section id="tab-mistakes" class="tab-content-panel hidden">
+      <div id="mistakes-content">
+        <!-- Rendered dynamically by app.js -->
+      </div>
+    </section>
+
+    <!-- Tab 6: Flashcards Panel -->
+    <section id="tab-flashcards" class="tab-content-panel hidden">
+      <div id="flashcards-content">
+        <!-- Rendered dynamically by app.js -->
+      </div>
+    </section>
+
+  </main>
+
+  <!-- FOOTER -->
+  <footer class="bg-white border-t border-slate-200 py-6 mt-12 text-center text-xs text-slate-500">
+    <div class="max-w-7xl mx-auto px-4">
+      <p class="font-semibold text-slate-700">KTVM MASTER - Công Cụ Học Tập & Ôn Thi Kinh Tế Vĩ Mô Cá Nhân</p>
+      <p class="mt-1">Dữ liệu nguồn trích xuất trực tiếp từ NotebookLM "Đo lường Thu nhập Quốc gia" & Tài liệu Google Docs "trắc nghiệp ktvm" (1.924 câu)</p>
+      <div class="mt-3 flex items-center justify-center gap-4 text-[11px] text-slate-400">
+        <span>✓ Tự động lưu tiến độ vào trình duyệt</span>
+        <span>•</span>
+        <span>✓ Hỗ trợ công thức toán học KaTeX</span>
+        <span>•</span>
+        <span>✓ Đồ thị mô phỏng chính sách tương tác</span>
+      </div>
+    </div>
+  </footer>
+
+  <!-- FLOATING HIGHLIGHT & NOTE TOOLBAR -->
+  <div id="highlight-floating-toolbar" class="bg-slate-900/95 backdrop-blur-md text-white px-3 py-2 rounded-2xl shadow-2xl flex items-center gap-2 border border-slate-700/80">
+    <span class="text-[11px] font-bold text-slate-300 pr-1 border-r border-slate-700">Highlight:</span>
+    <!-- Color Swatches: Vàng, Xanh lá, Cam -->
+    <button onclick="handleToolbarColor('yellow')" title="Highlight màu Vàng" class="w-6 h-6 rounded-full bg-yellow-300 hover:scale-110 active:scale-95 transition-all shadow-sm border border-yellow-400"></button>
+    <button onclick="handleToolbarColor('green')" title="Highlight màu Xanh lá" class="w-6 h-6 rounded-full bg-emerald-400 hover:scale-110 active:scale-95 transition-all shadow-sm border border-emerald-500"></button>
+    <button onclick="handleToolbarColor('orange')" title="Highlight màu Cam" class="w-6 h-6 rounded-full bg-orange-400 hover:scale-110 active:scale-95 transition-all shadow-sm border border-orange-500"></button>
+
+    <div class="h-4 w-px bg-slate-700 mx-1"></div>
+
+    <button onclick="handleToolbarAddNote()" class="flex items-center gap-1 px-2.5 py-1 bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-semibold rounded-lg transition-all">
+      <span>📝</span>
+      <span>Ghi chú</span>
+    </button>
+
+    <button id="btn-toolbar-delete" onclick="handleToolbarDelete()" class="hidden flex items-center gap-1 px-2 py-1 bg-rose-900/50 hover:bg-rose-800 text-rose-300 text-xs font-semibold rounded-lg transition-all" title="Xóa highlight này">
+      <span>🗑️</span>
+    </button>
+
+    <button onclick="hideHighlightToolbar()" class="text-slate-400 hover:text-slate-200 text-xs p-1 ml-1" title="Đóng">
+      ✕
+    </button>
+  </div>
+
+  <!-- NOTE EDITOR MODAL -->
+  <div id="note-modal-backdrop" class="fixed inset-0 z-50 bg-slate-900/50 backdrop-blur-xs hidden flex items-center justify-center p-4">
+    <div class="bg-white rounded-2xl max-w-lg w-full p-6 shadow-2xl border border-slate-200 relative">
+      <div class="flex items-center justify-between pb-3 border-b border-slate-100">
+        <div class="flex items-center gap-2">
+          <span class="text-xl">📝</span>
+          <h3 class="font-extrabold text-slate-900 text-base">Ghi chú cho đoạn văn bản</h3>
+        </div>
+        <button onclick="closeNoteModal()" class="text-slate-400 hover:text-slate-600 text-sm font-bold">✕</button>
+      </div>
+
+      <div class="my-4">
+        <label class="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1">Đoạn trích bôi đậm:</label>
+        <blockquote id="note-modal-quote" class="text-xs text-slate-700 bg-slate-50 p-3 rounded-xl border border-slate-200 italic line-clamp-3"></blockquote>
+      </div>
+
+      <div class="mb-4">
+        <label class="block text-xs font-semibold text-slate-700 mb-1">Nội dung ghi chú của bạn:</label>
+        <textarea id="note-modal-input" rows="4" placeholder="Nhập suy nghĩ, giải thích, thắc mắc hoặc mẹo ghi nhớ cho đoạn này..." class="w-full text-sm p-3 border border-slate-200 rounded-xl focus:border-blue-500 focus:ring-2 focus:ring-blue-100 outline-none transition-all"></textarea>
+      </div>
+
+      <div class="flex items-center justify-between pt-2">
+        <button id="btn-modal-delete-hl" onclick="handleDeleteHighlightFromModal()" class="text-xs font-bold text-rose-600 hover:text-rose-700">
+          🗑️ Xóa highlight này
+        </button>
+        <div class="flex items-center gap-2">
+          <button onclick="closeNoteModal()" class="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-xs font-bold transition-all">Hủy</button>
+          <button onclick="saveNoteModal()" class="px-5 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-bold shadow-md transition-all">Lưu ghi chú ✓</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- FLOATING QUICK NOTEBOOK TOGGLE BUTTON -->
+  <button onclick="toggleNotesDrawer()" id="btn-floating-notes" class="fixed bottom-6 right-6 z-40 bg-blue-600 hover:bg-blue-500 text-white p-3.5 rounded-2xl shadow-xl shadow-blue-500/30 flex items-center gap-2.5 font-bold text-xs transition-all transform hover:scale-105 active:scale-95">
+    <span class="text-base">📝</span>
+    <span class="hidden sm:inline">Sổ tay Ghi chú & Highlight</span>
+    <span id="floating-notes-count" class="px-2 py-0.5 rounded-full bg-white text-blue-700 font-extrabold text-[10px]">0</span>
+  </button>
+
+  <!-- NOTES & HIGHLIGHTS SLIDE-OVER DRAWER -->
+  <div id="notes-drawer-backdrop" onclick="toggleNotesDrawer()" class="fixed inset-0 z-50 bg-slate-900/40 backdrop-blur-xs hidden transition-opacity"></div>
+  <aside id="notes-drawer-panel" class="fixed top-0 right-0 bottom-0 z-50 w-full max-w-md bg-white shadow-2xl border-l border-slate-200 flex flex-col transform translate-x-full transition-transform duration-300 ease-in-out">
+    <div class="p-5 border-b border-slate-200 flex items-center justify-between bg-slate-50">
+      <div>
+        <h3 class="font-extrabold text-slate-900 text-base flex items-center gap-2">
+          <span>📝</span>
+          <span>Sổ Tay Ghi Chú Cá Nhân</span>
+        </h3>
+        <p id="drawer-chapter-title" class="text-xs text-slate-500 mt-0.5">Chương 10</p>
+      </div>
+      <button onclick="toggleNotesDrawer()" class="text-slate-400 hover:text-slate-600 p-2 text-sm font-bold">✕</button>
+    </div>
+
+    <div class="p-5 flex-1 overflow-y-auto space-y-6">
+      <div>
+        <div class="flex items-center justify-between mb-2">
+          <label class="text-xs font-bold text-slate-800 uppercase tracking-wider flex items-center gap-1.5">
+            <span>✍️ Ghi chú tự do của chương:</span>
+          </label>
+          <span id="note-autosave-indicator" class="text-[10px] text-emerald-600 font-medium">✓ Đã tự động lưu</span>
+        </div>
+        <textarea 
+          id="chapter-freeform-note" 
+          rows="6" 
+          oninput="handleAutoSaveChapterNote(this.value)"
+          placeholder="Gõ bất kỳ ghi chú cá nhân, tóm tắt bài học, công thức cần nhớ cho chương này..." 
+          class="w-full text-xs p-3.5 bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:border-blue-500 focus:ring-2 focus:ring-blue-100 outline-none leading-relaxed transition-all resize-y"
+        ></textarea>
+      </div>
+
+      <div class="space-y-3 pt-4 border-t border-slate-200">
+        <div class="flex items-center justify-between">
+          <h4 class="text-xs font-bold text-slate-800 uppercase tracking-wider">
+            Các đoạn bôi đậm trong chương (<span id="drawer-highlights-count">0</span>):
+          </h4>
+          <button onclick="copyAllChapterNotes()" class="text-[11px] font-semibold text-blue-600 hover:underline">Sao chép tất cả</button>
+        </div>
+
+        <div id="drawer-highlights-list" class="space-y-2.5">
+          <!-- Rendered dynamically -->
+        </div>
+      </div>
+
+      <!-- Backup & Restore Notes for multi-device sync -->
+      <div class="pt-4 border-t border-slate-200 flex items-center justify-between gap-2">
+        <button onclick="exportAllNotes()" class="flex-1 py-1.5 px-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg text-[11px] font-medium transition-colors text-center" title="Tải toàn bộ ghi chú & highlight về máy">
+          📥 Xuất ghi chú (.json)
+        </button>
+        <button onclick="document.getElementById('import-notes-file').click()" class="flex-1 py-1.5 px-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg text-[11px] font-medium transition-colors text-center" title="Nạp ghi chú từ file">
+          📤 Nhập ghi chú
+        </button>
+        <input type="file" id="import-notes-file" accept=".json" class="hidden" onchange="importNotesFromFile(event)">
+      </div>
+    </div>
+  </aside>
+
+  <!-- SCRIPT DATA & APP MODULES -->
+  <script src="quiz_data.js"></script>
+  <script src="theory_data.js"></script>
+  <script src="models.js"></script>
+  <script src="app.js"></script>
+
+</body>
+</html>

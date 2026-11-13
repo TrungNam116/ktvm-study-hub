@@ -1,0 +1,7 @@
+# Python scripts & build cache
+*.py
+__pycache__/
+slides_text/
+raw_*.txt
+*.log
+.system_generated/
