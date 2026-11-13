@@ -283,7 +283,10 @@
           <h4 class="text-xs font-bold text-slate-800 uppercase tracking-wider">
             Các đoạn bôi đậm trong chương (<span id="drawer-highlights-count">0</span>):
           </h4>
-          <button onclick="copyAllChapterNotes()" class="text-[11px] font-semibold text-blue-600 hover:underline">Sao chép tất cả</button>
+          <div class="flex items-center gap-3">
+            <button onclick="copyAllChapterNotes()" class="text-[11px] font-semibold text-blue-600 hover:underline">Sao chép tất cả</button>
+            <button onclick="clearAllChapterHighlights()" class="text-[11px] font-semibold text-rose-500 hover:underline">Xóa tất cả</button>
+          </div>
         </div>
 
         <div id="drawer-highlights-list" class="space-y-2.5">

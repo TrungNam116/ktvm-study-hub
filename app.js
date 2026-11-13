@@ -1991,6 +1991,44 @@ function setupHighlightListener() {
   });
 }
 
+function snapRangeToWord(range) {
+  const isWordChar = (ch) => /\p{L}|\p{N}/u.test(ch);
+
+  // 1. Snap start container to beginning of word
+  if (range.startContainer && range.startContainer.nodeType === Node.TEXT_NODE) {
+    const text = range.startContainer.nodeValue || '';
+    let offset = range.startOffset;
+    if (offset > 0 && offset < text.length && isWordChar(text[offset - 1]) && isWordChar(text[offset])) {
+      while (offset > 0 && isWordChar(text[offset - 1])) {
+        offset--;
+      }
+      range.setStart(range.startContainer, offset);
+    }
+    // Trim leading whitespace
+    while (offset < text.length && /\s/.test(text[offset]) && (range.startContainer !== range.endContainer || offset < range.endOffset)) {
+      offset++;
+      range.setStart(range.startContainer, offset);
+    }
+  }
+
+  // 2. Snap end container to end of word
+  if (range.endContainer && range.endContainer.nodeType === Node.TEXT_NODE) {
+    const endText = range.endContainer.nodeValue || '';
+    let endOffset = range.endOffset;
+    if (endOffset > 0 && endOffset < endText.length && isWordChar(endText[endOffset - 1]) && isWordChar(endText[endOffset])) {
+      while (endOffset < endText.length && isWordChar(endText[endOffset])) {
+        endOffset++;
+      }
+      range.setEnd(range.endContainer, endOffset);
+    }
+    // Trim trailing whitespace
+    while (endOffset > 0 && /\s/.test(endText[endOffset - 1]) && (range.startContainer !== range.endContainer || endOffset > range.startOffset)) {
+      endOffset--;
+      range.setEnd(range.endContainer, endOffset);
+    }
+  }
+}
+
 function handleTextSelection(e) {
   if (e.target.closest('#highlight-floating-toolbar') || 
       e.target.closest('#note-modal-backdrop') || 
@@ -2013,16 +2051,25 @@ function handleTextSelection(e) {
     return;
   }
 
-  const selectedText = selection.toString().trim();
-  if (selectedText.length < 2) {
-    return;
-  }
-
   const range = selection.getRangeAt(0);
   const theoryContainer = document.getElementById('theory-content');
   if (!theoryContainer || !theoryContainer.contains(range.commonAncestorContainer)) {
     return;
   }
+
+  // Snap range to clean full word boundaries so words are never sliced
+  snapRangeToWord(range);
+
+  const selectedText = range.toString().trim();
+  if (selectedText.length < 2) {
+    return;
+  }
+
+  // Update selection view so user sees full clean words highlighted
+  try {
+    selection.removeAllRanges();
+    selection.addRange(range);
+  } catch (err) {}
 
   const rect = range.getBoundingClientRect();
   showHighlightToolbar(rect, range, selectedText);
@@ -2080,12 +2127,55 @@ function hideHighlightToolbar() {
   AppState.selectedHighlightId = null;
 }
 
+// BIND RANGE WRAPPER FOR NATIVE SMOOTH HIGHLIGHTING
+function wrapRangeWithMark(range, hlId, color, note = '') {
+  const createMark = () => {
+    const mark = document.createElement('mark');
+    mark.className = `user-highlight highlight-${color}`;
+    mark.setAttribute('data-hl-id', hlId);
+    mark.setAttribute('data-color', color);
+    if (note) mark.setAttribute('data-has-note', 'true');
+
+    mark.addEventListener('click', (ev) => {
+      ev.stopPropagation();
+      const r = mark.getBoundingClientRect();
+      showHighlightToolbarForExisting(r, hlId);
+    });
+    return mark;
+  };
+
+  try {
+    const mark = createMark();
+    range.surroundContents(mark);
+    return mark;
+  } catch (e) {
+    // Cross-node range: extract contents and wrap
+    const mark = createMark();
+    const fragment = range.extractContents();
+
+    // Unwrap any existing inner marks to avoid nested tags
+    if (fragment.querySelectorAll) {
+      fragment.querySelectorAll('.user-highlight').forEach(inner => {
+        const p = inner.parentNode;
+        if (p) {
+          while (inner.firstChild) p.insertBefore(inner.firstChild, inner);
+          p.removeChild(inner);
+        }
+      });
+    }
+
+    mark.appendChild(fragment);
+    range.insertNode(mark);
+    return mark;
+  }
+}
+
 function handleToolbarColor(color) {
   const ch = AppState.currentChapter;
   if (!AppState.highlights[ch]) AppState.highlights[ch] = [];
 
   if (AppState.activeSelection) {
-    const { text } = AppState.activeSelection;
+    const { range, text } = AppState.activeSelection;
     const hlId = 'hl_' + Date.now() + '_' + Math.floor(Math.random() * 1000);
     const hlObj = {
       id: hlId,
@@ -2098,13 +2188,11 @@ function handleToolbarColor(color) {
     AppState.highlights[ch].push(hlObj);
     saveHighlightsToLocalStorage();
 
+    // Apply directly using browser Range - zero word splitting!
+    wrapRangeWithMark(range, hlId, color);
+
     window.getSelection()?.removeAllRanges();
     AppState.activeSelection = null;
-
-    const container = document.getElementById('theory-content');
-    if (container) {
-      applyMultiNodeHighlight(container, hlObj);
-    }
 
     updateHighlightsUI();
     hideHighlightToolbar();
@@ -2198,6 +2286,7 @@ function handleToolbarDelete() {
         parent.insertBefore(mark.firstChild, mark);
       }
       parent.removeChild(mark);
+      parent.normalize();
     }
   });
 
@@ -2215,6 +2304,30 @@ function handleDeleteHighlightFromModal() {
   closeNoteModal();
 }
 
+function clearAllChapterHighlights() {
+  const ch = AppState.currentChapter;
+  const list = AppState.highlights[ch] || [];
+  if (list.length === 0) {
+    alert('Chương này hiện chưa có highlight nào!');
+    return;
+  }
+  if (!confirm(`Bạn có chắc muốn xóa toàn bộ ${list.length} đoạn highlight của chương này không?`)) {
+    return;
+  }
+  const marks = document.querySelectorAll('#theory-content .user-highlight');
+  marks.forEach(mark => {
+    const parent = mark.parentNode;
+    if (parent) {
+      while (mark.firstChild) parent.insertBefore(mark.firstChild, mark);
+      parent.removeChild(mark);
+      parent.normalize();
+    }
+  });
+  AppState.highlights[ch] = [];
+  saveHighlightsToLocalStorage();
+  updateHighlightsUI();
+}
+
 function restoreChapterHighlights(chapter) {
   const container = document.getElementById('theory-content');
   if (!container || !AppState.highlights[chapter]) {
@@ -2229,24 +2342,37 @@ function restoreChapterHighlights(chapter) {
   }
 
   list.forEach(hl => {
-    applyMultiNodeHighlight(container, hl);
+    restoreSingleHighlight(container, hl);
   });
 
   updateHighlightsUI();
 }
 
-// ROBUST MULTI-NODE HIGHLIGHT RESTORATION ENGINE
-function applyMultiNodeHighlight(root, hl) {
+function restoreSingleHighlight(root, hl) {
   if (!hl.text || hl.text.length < 2) return;
   if (root.querySelector(`.user-highlight[data-hl-id="${hl.id}"]`)) return;
 
-  // 1. Walk visible text nodes inside theory container
-  const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT, {
+  const targetText = hl.text.trim();
+
+  // Try finding in a scoped block first (paragraph or list item)
+  const blocks = root.querySelectorAll('p, li, blockquote, h2, h3, h4, div.p-4');
+  let targetBlock = null;
+  for (const b of blocks) {
+    if (b.textContent && b.textContent.includes(targetText)) {
+      targetBlock = b;
+      break;
+    }
+  }
+
+  const searchScope = targetBlock || root;
+
+  // Walk all text nodes including those already marked to prevent offset drift
+  const walker = document.createTreeWalker(searchScope, NodeFilter.SHOW_TEXT, {
     acceptNode: function(node) {
       if (!node.nodeValue) return NodeFilter.FILTER_REJECT;
       const parent = node.parentElement;
       if (!parent) return NodeFilter.FILTER_REJECT;
-      if (['SCRIPT', 'STYLE'].includes(parent.tagName) || parent.closest('.katex') || parent.closest('.user-highlight')) {
+      if (['SCRIPT', 'STYLE'].includes(parent.tagName) || parent.closest('.katex-html')) {
         return NodeFilter.FILTER_REJECT;
       }
       return NodeFilter.FILTER_ACCEPT;
@@ -2267,12 +2393,11 @@ function applyMultiNodeHighlight(root, hl) {
     fullText += val;
   }
 
-  // 2. Find occurrence of hl.text
-  let matchIdx = fullText.indexOf(hl.text);
-  let matchLen = hl.text.length;
+  let matchIdx = fullText.indexOf(targetText);
+  let matchLen = targetText.length;
 
   if (matchIdx === -1) {
-    const normTarget = hl.text.replace(/\s+/g, ' ').trim();
+    const normTarget = targetText.replace(/\s+/g, ' ');
     const words = normTarget.split(' ').map(w => w.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')).filter(Boolean);
     if (words.length > 0) {
       try {
@@ -2291,58 +2416,13 @@ function applyMultiNodeHighlight(root, hl) {
   const startEntry = nodeCharMap[matchIdx];
   const endEntry = nodeCharMap[matchIdx + matchLen - 1];
 
-  const startNodeIdx = textNodes.indexOf(startEntry.node);
-  const endNodeIdx = textNodes.indexOf(endEntry.node);
-  if (startNodeIdx === -1 || endNodeIdx === -1 || startNodeIdx > endNodeIdx) return;
+  try {
+    const range = document.createRange();
+    range.setStart(startEntry.node, startEntry.offset);
+    range.setEnd(endEntry.node, endEntry.offset + 1);
 
-  const attachEvents = (mark) => {
-    mark.addEventListener('click', (ev) => {
-      ev.stopPropagation();
-      const r = mark.getBoundingClientRect();
-      showHighlightToolbarForExisting(r, hl.id);
-    });
-  };
-
-  if (startNodeIdx === endNodeIdx) {
-    try {
-      const range = document.createRange();
-      range.setStart(startEntry.node, startEntry.offset);
-      range.setEnd(startEntry.node, endEntry.offset + 1);
-
-      const mark = document.createElement('mark');
-      mark.className = `user-highlight highlight-${hl.color}`;
-      mark.setAttribute('data-hl-id', hl.id);
-      mark.setAttribute('data-color', hl.color);
-      if (hl.note) mark.setAttribute('data-has-note', 'true');
-
-      range.surroundContents(mark);
-      attachEvents(mark);
-    } catch (e) {}
-  } else {
-    // Multi-node highlight (spanning across strong, em, etc.)
-    for (let i = startNodeIdx; i <= endNodeIdx; i++) {
-      const cur = textNodes[i];
-      let from = (i === startNodeIdx) ? startEntry.offset : 0;
-      let to = (i === endNodeIdx) ? (endEntry.offset + 1) : cur.nodeValue.length;
-
-      if (from >= to) continue;
-
-      try {
-        const range = document.createRange();
-        range.setStart(cur, from);
-        range.setEnd(cur, to);
-
-        const mark = document.createElement('mark');
-        mark.className = `user-highlight highlight-${hl.color}`;
-        mark.setAttribute('data-hl-id', hl.id);
-        mark.setAttribute('data-color', hl.color);
-        if (hl.note) mark.setAttribute('data-has-note', 'true');
-
-        range.surroundContents(mark);
-        attachEvents(mark);
-      } catch (e) {}
-    }
-  }
+    wrapRangeWithMark(range, hl.id, hl.color, hl.note);
+  } catch (e) {}
 }
 
 function updateHighlightsUI() {
