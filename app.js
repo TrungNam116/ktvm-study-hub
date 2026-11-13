@@ -398,10 +398,8 @@ function renderTheoryTab() {
   // Mount inline interactive models directly inside the textbook sections
   mountInlineModels();
 
-  // Restore and bind highlights for this chapter
-  setTimeout(() => {
-    restoreChapterHighlights(chData.chapter);
-  }, 30);
+  // Restore and bind highlights for this chapter immediately
+  restoreChapterHighlights(chData.chapter);
 }
 
 
